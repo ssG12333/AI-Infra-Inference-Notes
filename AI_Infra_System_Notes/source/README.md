@@ -83,6 +83,7 @@
 - [llama.cpp-master](../../../源码/llama.cpp-master/) — CPU LLM 推理标杆
 - [ncnn-master](../../../源码/ncnn-master/) — 端侧推理框架
 - [ncnn_llm-main](../../../源码/ncnn_llm-main/) — 端侧 LLM 推理实现
+- [vllm-main](../../../源码/vllm-main/) — 服务端高吞吐 LLM 推理框架
 
 ### 学习管理
 - [CHECKLIST.md](../CHECKLIST.md) — 45 条自检清单

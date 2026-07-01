@@ -113,6 +113,7 @@
 | **ncnn** | 腾讯端侧推理框架 | [github.com/Tencent/ncnn](https://github.com/Tencent/ncnn) |
 | **ncnn_llm** | 基于 ncnn 的 LLM 推理 | [github.com/nihui/ncnn_llm](https://github.com/nihui/ncnn_llm) |
 | **llama.cpp** | CPU LLM 推理标杆 | [github.com/ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp) |
+| **vLLM** | 服务端高吞吐 LLM 推理 | [github.com/vllm-project/vllm](https://github.com/vllm-project/vllm) |
 
 ---
 

@@ -3,6 +3,7 @@
 #   git clone https://github.com/ggml-org/llama.cpp
 #   git clone https://github.com/Tencent/ncnn
 #   git clone https://github.com/nihui/ncnn_llm
+#   git clone https://github.com/vllm-project/vllm
 源码/
 
 # Claude 配置
