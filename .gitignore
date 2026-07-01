@@ -1,0 +1,9 @@
+# 第三方源码 (体积过大, 不纳入学习笔记仓库)
+# 如需源码, 请从官方仓库 clone:
+#   git clone https://github.com/ggml-org/llama.cpp
+#   git clone https://github.com/Tencent/ncnn
+#   git clone https://github.com/nihui/ncnn_llm
+源码/
+
+# Claude 配置
+.claude/

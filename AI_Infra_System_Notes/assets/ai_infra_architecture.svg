@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="950" viewBox="0 0 1400 950">
+  <rect width="1400" height="950" fill="#ffffff"/>
+  <style>
+    .title{font-family:'Microsoft YaHei','Noto Sans CJK SC',Arial,sans-serif;font-size:34px;font-weight:700;fill:#17324d}
+    .layer{font-family:'Microsoft YaHei','Noto Sans CJK SC',Arial,sans-serif;font-size:24px;font-weight:700;fill:#ffffff}
+    .sub{font-family:'Microsoft YaHei','Noto Sans CJK SC',Arial,sans-serif;font-size:17px;fill:#153044}
+    .small{font-family:'Microsoft YaHei','Noto Sans CJK SC',Arial,sans-serif;font-size:15px;fill:#34495e}
+    .note{font-family:'Microsoft YaHei','Noto Sans CJK SC',Arial,sans-serif;font-size:18px;font-weight:700;fill:#1c4966}
+    .box{fill:#f8fbfd;stroke:#b7cad8;stroke-width:1.4;rx:14;ry:14}
+    .arrow{stroke:#567;stroke-width:2.4;marker-end:url(#arrow)}
+    .dash{stroke:#e38b29;stroke-width:2;stroke-dasharray:7 5;fill:none;rx:16;ry:16}
+  </style>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#567"/></marker></defs>
+  <text x="700" y="50" text-anchor="middle" class="title">AI Infra 系统架构图：从算子到推理系统</text>
+
+  <!-- layers -->
+  <g transform="translate(70,85)">
+    <rect x="0" y="0" width="930" height="92" rx="18" fill="#f08a24"/>
+    <text x="28" y="36" class="layer">服务与部署层</text>
+    <text x="28" y="65" class="small" fill="#fff">API / Streaming / Tool Calling / Monitoring / Edge / Cloud</text>
+    <rect x="250" y="18" width="130" height="42" class="box"/><text x="315" y="45" text-anchor="middle" class="sub">ncnn</text>
+    <rect x="395" y="18" width="250" height="42" class="box"/><text x="520" y="45" text-anchor="middle" class="sub">vLLM / TGI / TensorRT-LLM</text>
+    <rect x="660" y="18" width="120" height="42" class="box"/><text x="720" y="45" text-anchor="middle" class="sub">API</text>
+    <rect x="795" y="18" width="110" height="42" class="box"/><text x="850" y="45" text-anchor="middle" class="sub">监控</text>
+  </g>
+
+  <g transform="translate(70,195)">
+    <rect x="0" y="0" width="930" height="104" rx="18" fill="#2f80b7"/>
+    <text x="28" y="36" class="layer">运行时与系统层</text>
+    <text x="28" y="69" class="small" fill="#fff">Runtime / Graph / Kernel Dispatch / Memory / Scheduler / Batching / PagedAttention</text>
+    <rect x="230" y="18" width="130" height="42" class="box"/><text x="295" y="45" text-anchor="middle" class="sub">Runtime</text>
+    <rect x="375" y="18" width="160" height="42" class="box"/><text x="455" y="45" text-anchor="middle" class="sub">Memory</text>
+    <rect x="550" y="18" width="160" height="42" class="box"/><text x="630" y="45" text-anchor="middle" class="sub">Scheduler</text>
+    <rect x="725" y="18" width="170" height="42" class="box"/><text x="810" y="45" text-anchor="middle" class="sub">PagedAttention</text>
+  </g>
+
+  <g transform="translate(70,325)">
+    <rect x="0" y="0" width="930" height="110" rx="18" fill="#31a6a6"/>
+    <text x="28" y="36" class="layer">模型与推理流水线层</text>
+    <text x="28" y="70" class="small" fill="#fff">Prompt → Tokenizer → Embedding → Decoder → KV Cache → Projection → Sampling → Text</text>
+    <rect x="190" y="52" width="110" height="38" class="box"/><text x="245" y="77" text-anchor="middle" class="sub">Prompt</text>
+    <rect x="315" y="52" width="120" height="38" class="box"/><text x="375" y="77" text-anchor="middle" class="sub">Tokenizer</text>
+    <rect x="450" y="52" width="120" height="38" class="box"/><text x="510" y="77" text-anchor="middle" class="sub">Decoder</text>
+    <rect x="585" y="52" width="120" height="38" class="box"/><text x="645" y="77" text-anchor="middle" class="sub">KV Cache</text>
+    <rect x="720" y="52" width="120" height="38" class="box"/><text x="780" y="77" text-anchor="middle" class="sub">Sampling</text>
+  </g>
+
+  <g transform="translate(70,465)">
+    <rect x="0" y="0" width="930" height="92" rx="18" fill="#3d8cc9"/>
+    <text x="28" y="36" class="layer">组合结构层</text>
+    <text x="28" y="65" class="small" fill="#fff">CNN Block / Transformer Block / Mamba / SSM / MoE / Multi-Modal</text>
+  </g>
+
+  <g transform="translate(70,585)">
+    <rect x="0" y="0" width="930" height="94" rx="18" fill="#376faa"/>
+    <text x="28" y="36" class="layer">计算与算子层</text>
+    <text x="28" y="66" class="small" fill="#fff">Binary / Unary / Reduction / MatMul / GEMM / Conv / Attention / RoPE / Norm / Activation</text>
+  </g>
+
+  <g transform="translate(70,710)">
+    <rect x="0" y="0" width="930" height="88" rx="18" fill="#405267"/>
+    <text x="28" y="36" class="layer">硬件基础层</text>
+    <text x="28" y="65" class="small" fill="#fff">CPU / GPU / CUDA / Vulkan / Mobile GPU / NPU / 内存 / 显存</text>
+  </g>
+
+  <!-- layer arrows -->
+  <line x1="535" y1="710" x2="535" y2="680" class="arrow"/>
+  <line x1="535" y1="585" x2="535" y2="557" class="arrow"/>
+  <line x1="535" y1="465" x2="535" y2="435" class="arrow"/>
+  <line x1="535" y1="325" x2="535" y2="300" class="arrow"/>
+  <line x1="535" y1="195" x2="535" y2="177" class="arrow"/>
+
+  <!-- right side support boxes -->
+  <rect x="1040" y="130" width="300" height="290" class="dash"/>
+  <text x="1190" y="165" text-anchor="middle" class="note">性能优化主线</text>
+  <text x="1070" y="205" class="small">• Quantization: INT8 / FP8 / INT4</text>
+  <text x="1070" y="235" class="small">• KV Cache 量化</text>
+  <text x="1070" y="265" class="small">• FlashAttention</text>
+  <text x="1070" y="295" class="small">• Memory Layout</text>
+  <text x="1070" y="325" class="small">• Operator Fusion</text>
+  <text x="1070" y="355" class="small">• Profiling / Tuning</text>
+  <text x="1070" y="388" class="note">目标：更快、更省、更稳</text>
+
+  <rect x="1040" y="470" width="300" height="285" class="dash"/>
+  <text x="1190" y="505" text-anchor="middle" class="note">系统能力主线</text>
+  <text x="1070" y="545" class="small">• Request Queue</text>
+  <text x="1070" y="575" class="small">• Prefill vs Decode</text>
+  <text x="1070" y="605" class="small">• Scheduler / Batching</text>
+  <text x="1070" y="635" class="small">• Cache Reuse</text>
+  <text x="1070" y="665" class="small">• Parallelism Strategy</text>
+  <text x="1070" y="695" class="small">• Observability / Autoscaling</text>
+  <text x="1070" y="728" class="note">目标：完整 AI 服务系统</text>
+
+  <!-- bottom path -->
+  <text x="700" y="840" text-anchor="middle" class="note">学习升级路径</text>
+  <g transform="translate(105,865)">
+    <rect x="0" y="0" width="250" height="50" rx="16" fill="#edf5fb" stroke="#9bbbd0"/>
+    <text x="125" y="32" text-anchor="middle" class="sub">当前基础：算子理解</text>
+    <line x1="260" y1="25" x2="330" y2="25" class="arrow"/>
+    <rect x="345" y="0" width="250" height="50" rx="16" fill="#edf5fb" stroke="#9bbbd0"/>
+    <text x="470" y="32" text-anchor="middle" class="sub">已进入：LLM 推理链路</text>
+    <line x1="605" y1="25" x2="675" y2="25" class="arrow"/>
+    <rect x="690" y="0" width="250" height="50" rx="16" fill="#fff5e8" stroke="#e7ad61"/>
+    <text x="815" y="32" text-anchor="middle" class="sub">待强化：内存/调度/执行</text>
+    <line x1="950" y1="25" x2="1020" y2="25" class="arrow"/>
+    <rect x="1035" y="0" width="250" height="50" rx="16" fill="#fff5e8" stroke="#e7ad61"/>
+    <text x="1160" y="32" text-anchor="middle" class="sub">目标：AI Infra 工程师</text>
+  </g>
+</svg>

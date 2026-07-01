@@ -1,0 +1,60 @@
+flowchart TB
+    subgraph S6[服务与部署层]
+        A1[API / Chat Service]
+        A2[Multi-turn Dialogue]
+        A3[Tool Calling]
+        A4[Monitoring]
+        A5[Edge Deployment: ncnn]
+        A6[Cloud Serving: vLLM / TGI / TensorRT-LLM]
+    end
+
+    subgraph S5[运行时与系统层]
+        B1[Runtime / Executor]
+        B2[Graph Optimization]
+        B3[Kernel Dispatch]
+        B4[Memory Management]
+        B5[Scheduler / Batching]
+        B6[Continuous Batching]
+        B7[Tensor Parallel]
+        B8[PagedAttention]
+    end
+
+    subgraph S4[模型与推理流水线层]
+        C1[Prompt Template] --> C2[Tokenizer / BPE] --> C3[Embedding]
+        C3 --> C4[Decoder Stack]
+        C4 --> C5[KV Cache]
+        C5 --> C6[Projection]
+        C6 --> C7[Sampling]
+        C7 --> C8[Token to Text]
+    end
+
+    subgraph S3[组合结构层]
+        D1[CNN Block / ResNet]
+        D2[RNN / GRU / LSTM]
+        D3[Transformer Block]
+        D4[Mamba / SSM]
+        D5[MoE]
+        D6[Multi-Modal Block]
+    end
+
+    subgraph S2[计算与算子层]
+        E1[Binary / Unary / Reduction]
+        E2[MatMul / GEMM]
+        E3[Conv / Pooling]
+        E4[Attention / RoPE]
+        E5[Norm / Activation]
+        E6[Embedding / Sampling]
+    end
+
+    subgraph S1[硬件基础层]
+        F1[CPU]
+        F2[GPU / CUDA]
+        F3[Vulkan / Mobile GPU]
+        F4[内存 / 显存]
+        F5[NPU / Edge Device]
+    end
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6
+    C5 -.prefill / decode / cache.-> B4
+    C4 -.kernel / graph / dispatch.-> B3
+    B5 -.serving / scheduling / scaling.-> A1
