@@ -120,4 +120,15 @@
 
 ---
 
-*🤖 维护者: [ssG12333](https://github.com/ssG12333)*
+## 📜 版权 & 协议
+
+<p align="center">
+  <b>© 2025 <a href="https://github.com/ssG12333">ssG12333</a> — AI Infra 推理系统学习资料</b><br><br>
+  本项目遵循 <a href="LICENSE">MIT License</a> 开源<br>
+  欢迎自由学习、分享、二次创作，引用时请注明出处<br><br>
+  <b>如果这份资料帮到了你，请给个 ⭐ Star</b><br>
+  你的 Star 是我持续更新的动力 🚀<br><br>
+  <a href="https://github.com/ssG12333/AI-Infra-Inference-Notes">
+    <img src="https://img.shields.io/github/stars/ssG12333/AI-Infra-Inference-Notes?style=social" alt="GitHub stars">
+  </a>
+</p>

@@ -144,3 +144,10 @@ module-XX-*/
 ## 开始学习
 
 → [Module 1: 基石算子——逐元素的世界](module-01-foundations/README.md)
+
+---
+
+<p align="center">
+  <sub>© 2025 <a href="https://github.com/ssG12333">ssG12333</a> · MIT License</sub><br>
+  <sub>⭐ 如果帮到了你，请给个 Star ~</sub>
+</p>
