@@ -2,7 +2,7 @@
 
 > 深度学习的所有复杂操作，最终都可以追溯到对单个数值的加减乘除。就像再宏伟的建筑也是由一块块砖砌成的——本模块就是带你认识每一块"砖"。
 
-📓 **配套 Jupyter Notebook**: [123.ipynb](123.ipynb) — 40 个 cell，边读边跑，代码验证每一个概念。建议先读本文档建立认知框架，再打开 Notebook 逐 cell 运行。
+📓 **配套 Jupyter Notebook**: [module-01-notebook.ipynb](module-01-notebook.ipynb) — 40 个 cell，边读边跑，代码验证每一个概念。建议先读本文档建立认知框架，再打开 Notebook 逐 cell 运行。
 
 ---
 
@@ -564,7 +564,7 @@ Cosine Decay:
 
 ## 动手练习 & Jupyter 实战指引
 
-打开 [123.ipynb](123.ipynb)，按以下路线边读边跑：
+打开 [module-01-notebook.ipynb](module-01-notebook.ipynb)，按以下路线边读边跑：
 
 | 练习 | 内容 | Notebook Cell | 验证目标 |
 |------|------|:-----------:|---------|
