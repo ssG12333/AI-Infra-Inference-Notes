@@ -1,11 +1,13 @@
 # AI Infra 推理系统 · 完整学习资料
 
 > 从深度学习算子的加减乘除，到 vLLM 服务端高并发推理——系统化掌握 AI Infra 全栈。
+> **🔥 持续更新：从学习资料到部署实战，全流程跟进。**
 
 [![Modules](https://img.shields.io/badge/modules-9-blue)](AI_Infra_System_Notes/source/)
 [![Docs](https://img.shields.io/badge/docs-10篇-green)](AI_Infra_System_Notes/docs/)
 [![Lines](https://img.shields.io/badge/总行数-24000+-orange)](#)
-[![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
+[![Status](https://img.shields.io/badge/更新-持续进行中-brightgreen)]()
+[![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 ---
 
@@ -123,7 +125,8 @@
 ## 📜 版权 & 协议
 
 <p align="center">
-  <b>© 2025 <a href="https://github.com/ssG12333">ssG12333</a> — AI Infra 推理系统学习资料</b><br><br>
+  <b>© 2025 <a href="https://github.com/ssG12333">ssG12333</a> — AI Infra 推理系统学习资料</b><br>
+  🔥 持续更新中：从资料整理到部署全流程<br><br>
   本项目遵循 <a href="LICENSE">MIT License</a> 开源<br>
   欢迎自由学习、分享、二次创作，引用时请注明出处<br><br>
   <b>如果这份资料帮到了你，请给个 ⭐ Star</b><br>
