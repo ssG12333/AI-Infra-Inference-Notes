@@ -51,21 +51,76 @@
                      (这是整个系统的"记忆中枢")
 ```
 
-**为什么偏偏拆成 3 个？这里面有三个精妙的考量：**
+### 2.1 为什么偏偏拆成 3 个？
+
+这里面有三个精妙的考量：
 
 **第一，KV Cache 的物理位置。** 注意力机制的 K 和 V 向量产生于 decoder 的中间层。如果整个模型是一个大网络，从外部根本没法"伸手进去"把 KV Cache 拿出来存、下次再塞回去。拆出独立的 decoder_net，KV Cache 就是它的输入输出，天然可管理——就像把发动机单独拆出来，换机油才方便。
 
-**第二，权重的复用。** Embedding 和 Projection（输入嵌入层和输出投影层）在数学上是转置关系。Qwen3-0.6B 的词表有 151936 个 token，每个 1024 维——这份权重矩阵足足 592 MB。如果 Embedding 和 Projection 各存一份，就是 1.2 GB。ncnn_llm 让它们**共享同一份权重文件**——直接省下一半。对于端侧设备来说，600 MB 可能就是"能跑"和"跑不了"的天壤之别。
+**第二，权重的复用（Weight Tying）。** Embedding 和 Projection（输入嵌入层和输出投影层）在数学上是转置关系：`Projection(h) = h · W_embed^T`。Qwen3-0.6B 的词表有 151936 个 token，每个 1024 维：
+
+```
+一份 Embedding 矩阵的大小 = 151936 × 1024 × 2 bytes (FP16) ≈ 311 MB
+如果各存一份 → 622 MB
+Weight Tying 共享 → 只占 311 MB
+节省 311 MB ≈ 端侧设备总内存的 15%~25%
+```
+
+ncnn_llm 让它们**共享同一份权重文件**——直接省下 311 MB。对于端侧设备来说，这可能就是"能跑"和"跑不了"的天壤之别。
 
 **第三，内存的按需调度。** embed_net 只在 prefill 和每次 decode 的第一步跑一次；proj_out_net 只在需要输出 token 时才跑；decoder_net 才是那个每步都要跑的"重体力活"。拆开后，三者的内存可以独立管理——跑完就释放，不要让不需要的网络占着茅坑。
 
 > 🔬 **源码印证**：ncnn_llm_gpt.cpp 构造函数中，`embed_net->load_model(bin)` 和 `proj_out_net->load_model(bin)` 加载的是**同一个 bin 文件**——这就是 Weight Tying 的直接证据。
+
+### 2.2 为什么不拆成 2 个或 4 个？
+
+这是一个很好的架构设计问题。对比各选型的取舍：
+
+| 拆分方案 | 优点 | 缺点 | 适用场景 |
+|---------|------|------|---------|
+| **1 个大网** | 实现最简单，forward 一步到位 | KV Cache 被封闭在内部无法管理；无法做 Weight Tying | 实验原型 |
+| **2 个网** (embed+decoder 合并 / decoder+proj 合并) | 比 1 个略好 | 要么牺牲 Weight Tying，要么牺牲 KV Cache 管理 | 折中方案 |
+| **✅ 3 个网 (ncnn_llm 方案)** | KV Cache 自由出入 + Weight Tying + 按需调度 | 多一个网络的加载开销（但只一次） | **端侧推理部署** |
+| **4 个网** (每层独立) | 极致的按需调度 | 管理复杂度爆炸；层间依赖折叠 | 分布式推理 / 流水线并行 |
+
+3 Net 在"灵活性"和"工程复杂度"之间找到了最佳平衡点——不多不少，刚刚好。
+
+### 2.3 各 Net 的活跃状态矩阵
+
+不同推理阶段，三个 Net 的参与度截然不同：
+
+| 推理阶段 | embed_net | decoder_net | proj_out_net |
+|---------|:---------:|:-----------:|:------------:|
+| Prefill（处理 Prompt） | ✅ 一次 | ✅ N 层 × 1 次 | ✅ 最后一步 |
+| Decode（逐 token 生成） | ✅ 每步一次 | ✅ 每步 N 层 | ✅ 每步一次 |
+| KV Cache 管理 | ❌ | ✅ 核心出入口 | ❌ |
+| 多轮对话追加 | ❌（历史已缓存） | ✅ 只算新 token | ❌ |
+
+这张表揭示了性能优化的方向：**decoder_net 是唯一在所有阶段都满载运行的组件**，它就是推理系统的"瓶颈所在"。
 
 ---
 
 ## 3. Phase 全景：一个 token 的 8 步生命旅程
 
 让我们跟踪一个具体的请求——用户对 Qwen3 说"你好"。从用户按下回车，到模型吐出第一个字，再到整段回复完成，数据经历了什么？
+
+### Phase 速查总表
+
+在深入每个 Phase 之前，先用一张表看清全貌。**重点关注"耗时占比"这一列**——它揭示了优化的方向。
+
+| Phase | 名称 | 输入 → 输出 | 关键算子 | 耗时占比 | 执行频率 |
+|:-----:|------|-------------|----------|:-------:|:--------:|
+| 0 | 配置加载 | model.json → 3个Net对象 | 文件 I/O | <1% | 启动时 1 次 |
+| 1 | Prompt 模板 | 用户文本 → 格式化字符串 | 字符串拼接 | <1% | 每轮对话 |
+| 2 | Tokenization | 文本 → token ID 数组 | BPE 贪心合并 | 1~3% | 每轮对话 |
+| 3 | 位置编码 | position_id → cos/sin 向量 | RoPE 旋转 | 1~2% | Prefill 1次+每次 Decode |
+| 4 | Embedding | token_id → 向量 [N, 1024] | Gather 查表 | 2~5% | Prefill 1次+每次 Decode |
+| **5** | **Decoder** | 向量[N,1024] → 向量[N,1024] | **RMSNorm + SDPA + SwiGLU** | **~85%** | **每次 Decode 都跑** |
+| 6 | Projection | 向量[1024] → logits[151936] | Linear(Gemm) | 5~8% | 每次 Decode |
+| 7 | Sampling | logits → next_token_id | Softmax+TopK+TopP | 1~2% | 每次 Decode |
+| 8 | Token to Text | token_id → UTF-8 文本 | Vocab 查表 | <1% | 每次 Decode |
+
+> 💡 **优化铁律**：Phase 5（Decoder）占 85%+ 的时间。任何不触及 Phase 5 的优化，都是锦上添花，而非雪中送炭。KV Cache、FlashAttention、Continuous Batching——所有这些技术的终极目标，都是让 Phase 5 跑得更快。
 
 ### Phase 0: 启程——配置加载（启动时执行一次）
 
@@ -78,6 +133,26 @@ model.json → 3个 Net + Tokenizer + RoPE参数
 ```
 
 别看这一步简单——整个推理系统的全部行为都靠这个 JSON 文件定义。换一个模型？改 model.json 就行，代码一行不用动。这是**数据驱动**的设计哲学。
+
+**一个真实的 model.json 长什么样？** 下面是 Qwen3-0.6B 的配置：
+
+```json
+{
+  "embed_param": 157,          // Embedding 参数数量
+  "attn_cnt": 28,              // Decoder 层数 = 28
+  "head_dim": 128,             // 每头维度 = 128
+  "q_n_head": 16,              // Q 的头数 = 16
+  "kv_n_head": 8,              // K/V 的头数 = 8（GQA，K/V 只有 Q 的一半）
+  "dim_model": 1024,           // 隐藏层维度 = 1024
+  "dim_ffn_hidden": 3072,      // FFN 中间维度 = 3072
+  "max_position": 131072,      // 最大上下文长度 = 128K
+  "rope_theta": 1000000,       // RoPE 基频 = 1,000,000
+  "norm_eps": 1e-6,            // RMSNorm epsilon
+  "do_lm_head_weight_bias": false  // LM Head 不加 bias
+}
+```
+
+> 💡 **注意 `rope_theta` 的变化**：Qwen2 用的是 10000，Qwen3 升级到 1000000。更大的 theta 意味着 RoPE 旋转频率更慢，相同位置下向量旋转的角度更小——这是为了支持 128K 超长上下文而做的调整。如果 theta 太小，长距离位置的旋转角度会"转太多圈"，导致位置信息混淆。
 
 ### Phase 1: 包装——Prompt Template
 
@@ -145,6 +220,26 @@ Q_pos_i · K_pos_j = (旋转了i步的q) · (旋转了j步的k)
 
 > 💡 **生活类比**：RoPE 不是在每本书上写"这是第 537 本书"，而是在每个书架上贴"我左边第 3 本"。当你把书架延长时，不需要重新编号。
 
+**具体数值示例**——用 2 维向量感受 RoPE 的旋转：
+
+```
+设 q = (1, 0), 位置 pos = 1, theta = 10000
+
+θ = pos × 10000^(-0/1) = 1 × 1 = 1 (弧度)  ← 简化 2 维情况
+
+RoPE 旋转公式:
+┌ q0' ┐   ┌ cos(θ)  -sin(θ) ┐ ┌ q0 ┐
+└ q1' ┘ = └ sin(θ)   cos(θ) ┘ └ q1 ┘
+
+q0' = 1 × cos(1) - 0 × sin(1) = 0.540
+q1' = 1 × sin(1) + 0 × cos(1) = 0.841
+
+所以 q 在位置 1 被旋转了 1 弧度 ≈ 57.3°
+验证: q0'² + q1'² = 0.540² + 0.841² = 1.0 (旋转保持模长不变！)
+```
+
+在 Qwen3 的 128 维 head 中，每个维度对的旋转频率不同——第 0/1 维转得最快（捕获 token 级别的位置），第 126/127 维转得最慢（捕获句子级别的长期依赖）。
+
 **多轮对话时特别要注意一点**：position_id 必须连续累加。第 1 轮用了位置 0~99，第 2 轮就要从 100 开始，而不是又从 0 开始——否则模型会觉得"第二轮的第一个 token 和第一轮的第一个 token 在同一个位置"，这会严重混淆位置信息。
 
 ### Phase 4: 具象——Embedding 词嵌入
@@ -201,6 +296,20 @@ Decode 做的事:
 ```
 
 > 💡 **一句话记住**：Prefill 是"一辆大卡车一次装满"，Decode 是"一个人一趟趟搬砖"。
+
+**Prefill vs Decode 的 FLOPs 定量对比（Qwen3-0.6B，12 token prompt → 100 token 生成）**：
+
+| 指标 | Prefill | Decode（单步） | Decode（100步累计） |
+|------|---------|:-------------:|:------------------:|
+| 每步输入 token 数 | 12 | 1 | 1×100 |
+| 单层 Q 投影 FLOPs | 2×12×1024×2048 ≈ **50M** | 2×1×1024×2048 ≈ **4.2M** | 420M |
+| 单层 SDPA FLOPs | 2×16×12×12 ≈ **4.6K** | 2×16×1×S_avg≈16K (S 逐渐增大) | ~1600K |
+| 单层所有算子 FLOPs | ~110M | ~9M | ~900M |
+| 28 层总计 FLOPs | ~**3.1 GFLOPS** | ~0.25 GFLOPS | ~**25 GFLOPS** |
+| 瓶颈 | **算力（Compute-bound）** | **带宽（Memory-bound）** | 带宽 |
+| 理想 GPU 利用率 | 80%+ | <30% | <30% |
+
+> 注：SDPA 在 Decode 阶段的计算量随序列长度线性增长，但在端侧场景（小 batch）下，整体瓶颈仍是 KV Cache 的内存读取而非 SDPA 计算。这就是为什么大 batch + FlashAttention 才能显著提升 Decode 速度。
 
 #### Decoder 内部到底发生了什么？（以 Qwen3 Layer 0 为例）
 
@@ -277,6 +386,26 @@ BPE Decode 的反向过程:
   → 跳过特殊 token (如 <|im_end|> 不输出给用户)
   → 如果是字节级编码的 token，ByteDecode 还原为原始 UTF-8 字节
 ```
+
+**具体例子——一个 token 如何变回汉字？**
+
+假设模型生成了 token_id = 364，查表得到 `token_str = "世界"`。在 GPT 系列 tokenizer 中，这个过程是：
+
+1. **查 id_to_token**：`id_to_token[364]` → 输出 token 字符串（可能是多字节 UTF-8 编码）
+2. **处理字节级 token**：BPE 词表中包含很多形如 `<0xE4>`、`<0xB8>`、`<0x96>` 的字节级 token。这些 token 不直接拼接，而是先收集所有字节，再用 UTF-8 解码器一次性还原为字符。例如 `[<0xE4>, <0xB8>, <0x96>]` → `"世"`。
+3. **拼接与输出**：将解码后的字符串片段拼接到已有输出后，如果是流式场景，通过 SSE（Server-Sent Events）逐个推送字符。
+
+```
+Token IDs 流:  [151645, 364, 597, 151644]   ← 模型依次生成的 token
+        │
+        ▼ 逐 token decode
+字符串片段:  ["", "世界", "你好", ""]
+        │  ↑ 跳过特殊 token <|im_start|>(151645) 和 <|im_end|>(151644)
+        ▼ 拼接
+最终输出:  "世界你好"
+```
+
+> 💡 **为什么有些 token 解码为空字符串？** 因为特殊 token（如 `<|im_start|>`, `<|im_end|>`, `<|endoftext|>`）在训练时被赋予了语义，但它们不应该出现在给用户的文本中。decode 时检测到这些 token ID 就跳过——这就是 `skip_special_tokens=True` 的默认行为。
 
 ---
 
@@ -419,7 +548,7 @@ Round 2: 用户说 "你能做什么？"
 "你好，你最近怎么样？"      → ~15 tokens
 ```
 
-每个 token 都在 KV Cache 里占一个位置，都在 prefill 时产生一次计算。所以说——**中文 LLM 的推理成本天生比英文高**。这不是偏见，是字节熵的物理规律。
+每个 token 都在 KV Cache 里占一个位置，都在 prefill 时产生一次计算。所以说——**中文 LLM 的推理成本天生比英文高**。这不是偏见，是 tokenization 效率和信息熵的物理规律。
 
 ---
 
@@ -439,6 +568,7 @@ Round 2: 用户说 "你能做什么？"
 
 - [ncnn_llm_original_README.md](../ncnn_llm_original_README.md) — 逐行源码分析，每个 Phase 的完整代码走读 (2683 行)
 - [03_llm_inference_pipeline.md](../../docs/03_llm_inference_pipeline.md) — 系统笔记版，架构视角的补充
+- [Module 5 Notebook](./module-05-notebook.ipynb) — 配套 Jupyter Notebook，用代码和可视化验证每个 Phase
 
 ---
 
